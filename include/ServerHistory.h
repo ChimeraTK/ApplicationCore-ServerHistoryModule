@@ -88,12 +88,12 @@
  *  write them once before the main loop of the module containing the history variables.
  */
 
-#include "ApplicationModule.h"
-#include "ArrayAccessor.h"
-#include "DeviceModule.h"
-#include "VariableGroup.h"
 #include <unordered_set>
 
+#include <ChimeraTK/ApplicationCore/ApplicationModule.h>
+#include <ChimeraTK/ApplicationCore/ArrayAccessor.h>
+#include <ChimeraTK/ApplicationCore/DeviceModule.h>
+#include <ChimeraTK/ApplicationCore/VariableGroup.h>
 #include <ChimeraTK/SupportedUserTypes.h>
 
 #include <string>
