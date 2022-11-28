@@ -8,12 +8,13 @@
  * \page historydoc Server based history module
  * \section historyintro Server based history
  *  Some control systems offer a variable history but some do not. In this case
- * the \c ServerHistory can be used to create a history ring buffer on the
+ * the \c ServerHistory can be used to create a history ring buffer managed by the
  * server. If only a local history is needed consider to use the \c MicroDAQ
- * module. In order to do so you connect the variable that should have a history
- * on the server to the \c ServerHistory module. The history length is set
- * during module construction and fixed per module. Every time one of the
- * variable handled by the history module is updated it will be filled into the
+ * module.
+ * In order use the Server history create a \c ServerHistory module.
+ * All variables that have the tag "history" will be added to the Server history.
+ * The history length is set during module construction and fixed per module.
+ * Every time one of the variable handled by the history module is updated it will be filled into the
  * history buffer. The buffer length (history length) can not be changed during
  * runtime. Finally, one can create an addition buffer for each history
  * buffer that includes the time stamps of each data point in the history buffer.
@@ -102,7 +103,7 @@
 
 namespace ChimeraTK { namespace history {
 
-  struct AccessorAttacher;
+  //  struct AccessorAttacher;
 
   template<typename UserType>
   struct HistoryEntry {
@@ -119,23 +120,23 @@ namespace ChimeraTK { namespace history {
     /**
      * Constructor.
      * Addition parameters to a normal application module constructor:
-     * \param owner Module owner passed to ApplicationModule constructor.
+     * \param owner Owning module passed to ApplicationModule constructor.
      * \param name Module name passed to ApplicationModule constructor.
      * \param description Module description passed to ApplicationModule constructor.
      * \param historyLength Length of the history buffers.
+     * \param historyTag The tag used to identify PVs to be considered in the server history module.
      * \param enableTimeStamps An additional
+     * \param prefix A prefix specifying the directory were history PVs are put.
      * ring buffer per variable will be added that holds the time stamps corresponding to the data ring buffer entries.
-     * \param hierarchyModifier Flag passed to ApplicationModule constructor.
      * \param tags Module tags passed to ApplicationModule constructor.
      */
-    ServerHistory(EntityOwner* owner, const std::string& name, const std::string& description,
-        size_t historyLength = 1200, bool enableTimeStamps = false,
-        HierarchyModifier hierarchyModifier = HierarchyModifier::none,
-        const std::unordered_set<std::string>& tags = {});
+    ServerHistory(ModuleGroup* owner, const std::string& name, const std::string& description,
+        size_t historyLength = 1200, const std::string& historyTag = "history", bool enableTimeStamps = false,
+        const std::string& prefix = "History", const std::unordered_set<std::string>& tags = {});
 
     /** Default constructor, creates a non-working module. Can be used for late
      * initialisation. */
-    ServerHistory() : _historyLength(1200), _enbaleTimeStamps(false) {}
+    ServerHistory() {}
 
     /**
      * Ad variables of a device to the ServerHistory. Calls virtualiseFromCatalog to get access to the internal variables.
@@ -143,42 +144,28 @@ namespace ChimeraTK { namespace history {
      * \param source For all variables of this module ring buffers are created.
      *               Use the LogicalNameMapping to create a virtual device module that holds all variables that should be
      *               passed to the history module.
-     * \param namePrefix This prefix is added to variable names added to the root directory in the process variable
-     *                   tree. E.g. a prefix \c history for a variable names data will appear as history/dummy/data
-     *                   if dummy is the name of the source module.
      * \param submodule If only a submodule should be added give the name.
      *                  It does not work do create a submodule of the DeviceModule itself!
-     * \param trigger This trigger is used for all poll type variable found in the source module.
      */
-    void addSource(const DeviceModule& source, const RegisterPath& namePrefix, const std::string& submodule = "",
-        const VariableNetworkNode& trigger = {});
-
-    /**
-     * Just gets the device module from the ConnectingDeviceModule before calling the DeviceModule version of addSource.
-     */
-    void addSource(ConnectingDeviceModule* source, const RegisterPath& namePrefix, const std::string& submodule = "",
-        const VariableNetworkNode& trigger = {});
+    void addSource(DeviceModule& source, const std::string& submodule = "");
 
     void prepare() override;
     void mainLoop() override;
 
-    void findTagAndAppendToModule(VirtualModule& virtualParent, const std::string& tag, bool eliminateAllHierarchies,
-        bool eliminateFirstHierarchy, bool negate, VirtualModule& root) const override;
+    /*
+     * Helper function used in tests.
+     * return Number of variables added to the history server module.
+     */
+    size_t getNumberOfVariables() { return _overallVariableList.size(); }
 
    private:
-    void prepareHierarchy(const RegisterPath& namePrefix);
+    //    void prepareHierarchy(const RegisterPath& namePrefix);
 
-    /**
-     * See public method for documentation.
-     */
-    void addSource(const Module& source, const RegisterPath& namePrefix, const VariableNetworkNode& trigger = {});
+    void addVariableFromModel(
+        const ChimeraTK::Model::ProcessVariableProxy& pv, const RegisterPath& submodule = "", bool checkTag = true);
 
     template<typename UserType>
-    VariableNetworkNode getAccessor(const std::string& variableName, const size_t& nElements);
-
-    /** Map of VariableGroups required to build the hierarchies. The key it the
-     * full path name. */
-    std::map<std::string, VariableGroup> groupMap;
+    void getAccessor(const std::string& variableName, const size_t& nElements);
 
     /** boost::fusion::map of UserTypes to std::lists containing the
      * ArrayPushInput and ArrayOutput accessors. These accessors are dynamically
@@ -197,11 +184,11 @@ namespace ChimeraTK { namespace history {
     TemplateUserTypeMapNoVoid<NameList> _nameListMap;
 
     /** Overall variable name list, used to detect name collisions */
-    std::list<std::string> _overallVariableList;
+    std::set<std::string> _overallVariableList;
 
-    size_t _historyLength;
-    bool _enbaleTimeStamps;
-
-    friend struct AccessorAttacher;
+    size_t _historyLength{1200};
+    bool _enbaleTimeStamps{false};
+    std::string _prefix{"History"};
+    std::string _inputTag{"history"};
   };
 }} // namespace ChimeraTK::history

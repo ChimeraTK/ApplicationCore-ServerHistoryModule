@@ -4,6 +4,7 @@
 
 #include "ServerHistory.h"
 
+#include <ChimeraTK/ApplicationCore/ScalarAccessor.h>
 #include <ChimeraTK/ApplicationCore/TestFacility.h>
 
 #include <boost/mpl/list.hpp>
@@ -15,11 +16,21 @@
 using namespace boost::unit_test_framework;
 
 // list of user types the accessors are tested with
-typedef boost::mpl::list<int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, float, double> test_types;
+typedef boost::mpl::list<int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, float, double, std::string> test_types;
+
+template<typename TestType>
+TestType getNumber(double val) {
+  return (TestType)val;
+}
+
+template<>
+std::string getNumber<std::string>(double val) {
+  return std::to_string(val);
+}
 
 template<typename UserType>
 struct Dummy : public ChimeraTK::ApplicationModule {
-  using ChimeraTK::ApplicationModule::ApplicationModule;
+  using ApplicationModule::ApplicationModule;
   ChimeraTK::ScalarPushInput<UserType> in{this, "in", "", "Dummy input"};
   ChimeraTK::ScalarOutput<UserType> out{this, "out", "", "Dummy output", {"history"}};
 
@@ -55,16 +66,15 @@ struct DummyArray : public ChimeraTK::ApplicationModule {
  */
 template<typename UserType>
 struct testApp : public ChimeraTK::Application {
-  testApp() : Application("test") {}
+  testApp(const std::string& historyTag = "history") : Application("test") {
+    hist = ChimeraTK::history::ServerHistory{
+        this, "historyTest", "History of selected process variables.", 20, historyTag};
+  }
   ~testApp() override { shutdown(); }
 
   Dummy<UserType> dummy{this, "Dummy", "Dummy module"};
+  // do not use name history here - else output vars will be added to the history too
   ChimeraTK::history::ServerHistory hist{this, "history", "History of selected process variables.", 20};
-
-  void initialise() override {
-    Application::initialise();
-    dumpConnections();
-  }
 };
 
 /**
@@ -77,145 +87,85 @@ struct testAppArray : public ChimeraTK::Application {
 
   DummyArray<UserType> dummy{this, "Dummy", "Dummy module"};
   ChimeraTK::history::ServerHistory hist{this, "history", "History of selected process variables.", 20};
-
-  void initialise() override {
-    Application::initialise();
-    dumpConnections();
-  }
 };
 
 /**
  * Define a test app to test the device module in combination with the History Module.
  */
 struct testAppDev : public ChimeraTK::Application {
-  testAppDev() : Application("test") { ChimeraTK::BackendFactory::getInstance().setDMapFilePath("test.dmap"); }
+  testAppDev() : Application("test") { hist.addSource(dev, ""); }
   ~testAppDev() override { shutdown(); }
 
-  ChimeraTK::ConnectingDeviceModule dev{this, "Dummy1Mapped", "/Dummy/out"};
+  // Set dmap file before creating DeviceModules
+  ChimeraTK::SetDMapFilePath dmap{"test.dmap"};
+  // Set trigger to Dummy.out
+  ChimeraTK::DeviceModule dev{this, "Dummy1Mapped", "/Dummy/out"};
 
   DummyArray<int> dummy{this, "Dummy", "Dummy module"};
 
-  ChimeraTK::history::ServerHistory hist{this, "history", "History of selected process variables.", 20, false};
-
-  void initialise() override {
-    hist.addSource(&dev, "", "", dummy.out);
-    Application::initialise();
-    dumpConnections();
-  }
+  ChimeraTK::history::ServerHistory hist{
+      this, "history", "History of selected process variables.", 20, "history", false};
 };
+
+BOOST_AUTO_TEST_CASE(testNoVarsFound) {
+  std::puts("testNoVarsFound");
+  testApp<int> app{"History"};
+  BOOST_CHECK_EQUAL(app.hist.getNumberOfVariables(), 0);
+}
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(testScalarHistory, T, test_types) {
   std::cout << "testScalarHistory " << typeid(T).name() << std::endl;
   testApp<T> app;
-  ChimeraTK::TestFacility tf;
+  ChimeraTK::TestFacility tf(app);
+  BOOST_CHECK_EQUAL(app.hist.getNumberOfVariables(), 1);
   auto i = tf.getScalar<T>("Dummy/in");
   tf.runApplication();
-  i = 42.;
+  i = getNumber<T>(42.);
   i.write();
   tf.stepApplication();
   std::vector<T> v_ref(20);
-  v_ref.back() = 42.;
-  auto v = tf.readArray<T>("history/Dummy/out");
+  v_ref.back() = getNumber<T>(42.);
+  auto v = tf.readArray<T>("History/Dummy/out");
   BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v_ref.begin(), v_ref.end());
-  i = 42.;
+  i = getNumber<T>(42.);
   i.write();
   tf.stepApplication();
-  *(v_ref.end() - 2) = 42.;
-  v = tf.readArray<T>("history/Dummy/out");
-  BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v_ref.begin(), v_ref.end());
-}
-
-/* 'if constexpr' not working with gcc version < 7 so
- * add string case manually.
- */
-BOOST_AUTO_TEST_CASE(testScalarHistoryString) {
-  std::cout << "testScalarHistoryString" << std::endl;
-  testApp<std::string> app;
-  ChimeraTK::TestFacility tf;
-  auto i = tf.getScalar<std::string>("Dummy/in");
-  tf.runApplication();
-  i = "42";
-  i.write();
-  tf.stepApplication();
-  std::vector<std::string> v_ref(20);
-  v_ref.back() = "42";
-  auto v = tf.readArray<std::string>("history/Dummy/out");
-  BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v_ref.begin(), v_ref.end());
-  i = "42";
-  i.write();
-  tf.stepApplication();
-  *(v_ref.end() - 2) = "42";
-  v = tf.readArray<std::string>("history/Dummy/out");
+  *(v_ref.end() - 2) = getNumber<T>(42.);
+  v = tf.readArray<T>("History/Dummy/out");
   BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v_ref.begin(), v_ref.end());
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(testArrayHistory, T, test_types) {
   std::cout << "testArrayHistory " << typeid(T).name() << std::endl;
   testAppArray<T> app;
-  ChimeraTK::TestFacility tf;
+  ChimeraTK::TestFacility tf(app);
+  BOOST_CHECK_EQUAL(app.hist.getNumberOfVariables(), 1);
   auto arr = tf.getArray<T>("Dummy/in");
   tf.runApplication();
-  arr[0] = 42.;
-  arr[1] = 43.;
-  arr[2] = 44.;
+  arr[0] = getNumber<T>(42.);
+  arr[1] = getNumber<T>(43.);
+  arr[2] = getNumber<T>(44.);
   arr.write();
   tf.stepApplication();
-  BOOST_CHECK_EQUAL(tf.readArray<T>("Dummy/out")[0], 42.0);
-  BOOST_CHECK_EQUAL(tf.readArray<T>("Dummy/out")[1], 43.0);
-  BOOST_CHECK_EQUAL(tf.readArray<T>("Dummy/out")[2], 44.0);
+  BOOST_CHECK_EQUAL(tf.readArray<T>("Dummy/out")[0], getNumber<T>(42.));
+  BOOST_CHECK_EQUAL(tf.readArray<T>("Dummy/out")[1], getNumber<T>(43.));
+  BOOST_CHECK_EQUAL(tf.readArray<T>("Dummy/out")[2], getNumber<T>(44.));
   std::vector<T> v_ref(20);
   for(size_t i = 0; i < 3; i++) {
-    v_ref.back() = 42.0 + i;
-    auto v = tf.readArray<T>("history/Dummy/out_" + std::to_string(i));
+    v_ref.back() = getNumber<T>(42.0 + i);
+    auto v = tf.readArray<T>("History/Dummy/out_" + std::to_string(i));
     BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v_ref.begin(), v_ref.end());
   }
 
-  arr[0] = 1.0;
-  arr[1] = 2.0;
-  arr[2] = 3.0;
+  arr[0] = getNumber<T>(1.0);
+  arr[1] = getNumber<T>(2.0);
+  arr[2] = getNumber<T>(3.0);
   arr.write();
   tf.stepApplication();
   for(size_t i = 0; i < 3; i++) {
-    *(v_ref.end() - 2) = 42.0 + i;
-    *(v_ref.end() - 1) = 1.0 + i;
-    auto v = tf.readArray<T>("history/Dummy/out_" + std::to_string(i));
-    BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v_ref.begin(), v_ref.end());
-  }
-}
-
-/* 'if constexpr' not working with gcc version < 7 so
- * add string case manually.
- */
-BOOST_AUTO_TEST_CASE(testArrayHistoryString) {
-  std::cout << "testArrayHistoryString" << std::endl;
-  testAppArray<std::string> app;
-  ChimeraTK::TestFacility tf;
-  auto arr = tf.getArray<std::string>("Dummy/in");
-  tf.runApplication();
-  arr[0] = "42";
-  arr[1] = "43";
-  arr[2] = "44";
-  arr.write();
-  tf.stepApplication();
-  BOOST_CHECK_EQUAL(tf.readArray<std::string>("Dummy/out")[0], "42");
-  BOOST_CHECK_EQUAL(tf.readArray<std::string>("Dummy/out")[1], "43");
-  BOOST_CHECK_EQUAL(tf.readArray<std::string>("Dummy/out")[2], "44");
-  std::vector<std::string> v_ref(20);
-  for(size_t i = 0; i < 3; i++) {
-    v_ref.back() = std::to_string(42 + i);
-    auto v = tf.readArray<std::string>("history/Dummy/out_" + std::to_string(i));
-    BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v_ref.begin(), v_ref.end());
-  }
-
-  arr[0] = "1";
-  arr[1] = "2";
-  arr[2] = "3";
-  arr.write();
-  tf.stepApplication();
-  for(size_t i = 0; i < 3; i++) {
-    *(v_ref.end() - 2) = std::to_string(42 + i);
-    *(v_ref.end() - 1) = std::to_string(1 + i);
-    auto v = tf.readArray<std::string>("history/Dummy/out_" + std::to_string(i));
+    *(v_ref.end() - 2) = getNumber<T>(42.0 + i);
+    *(v_ref.end() - 1) = getNumber<T>(1.0 + i);
+    auto v = tf.readArray<T>("History/Dummy/out_" + std::to_string(i));
     BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v_ref.begin(), v_ref.end());
   }
 }
@@ -223,7 +173,7 @@ BOOST_AUTO_TEST_CASE(testArrayHistoryString) {
 BOOST_AUTO_TEST_CASE(testDeviceHistory) {
   std::cout << "testDeviceHistory" << std::endl;
   testAppDev app;
-  ChimeraTK::TestFacility tf;
+  ChimeraTK::TestFacility tf(app);
 
   // We use this device directly to change its values
   ChimeraTK::Device dev;
@@ -233,7 +183,7 @@ BOOST_AUTO_TEST_CASE(testDeviceHistory) {
 
   // Trigger the reading of the device
   auto i = tf.getScalar<int>("Dummy/in");
-  BOOST_CHECK(true);
+  //  BOOST_CHECK(true);
   tf.runApplication();
   i = 1.;
   i.write();
@@ -243,7 +193,7 @@ BOOST_AUTO_TEST_CASE(testDeviceHistory) {
   // check new history buffer that ends with 42
   std::vector<double> v_ref(20);
   v_ref.back() = 42;
-  auto v = tf.readArray<float>("history/Device/signed32");
+  auto v = tf.readArray<float>("History/Device/signed32");
   BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v_ref.begin(), v_ref.end());
 
   // Trigger the reading of the device
@@ -254,7 +204,7 @@ BOOST_AUTO_TEST_CASE(testDeviceHistory) {
 
   // check new history buffer that ends with 42,42
   *(v_ref.end() - 2) = 42;
-  v = tf.readArray<float>("history/Device/signed32");
+  v = tf.readArray<float>("History/Device/signed32");
   BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v_ref.begin(), v_ref.end());
 
   dev.write("/FixedPoint/value", 43);
@@ -268,6 +218,6 @@ BOOST_AUTO_TEST_CASE(testDeviceHistory) {
   // check new history buffer that ends with 42,42,43
   *(v_ref.end() - 1) = 43;
   *(v_ref.end() - 3) = 42;
-  v = tf.readArray<float>("history/Device/signed32");
+  v = tf.readArray<float>("History/Device/signed32");
   BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v_ref.begin(), v_ref.end());
 }
