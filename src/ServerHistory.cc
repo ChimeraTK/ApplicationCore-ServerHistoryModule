@@ -153,7 +153,7 @@ namespace ChimeraTK { namespace history {
   void ServerHistory::prepare() {
     incrementDataFaultCounter(); // the written data is flagged as faulty
     writeAll();                  // send out initial values of all outputs.
-    decrementDataFaultCounter(); // when entering the main loop calculate the validiy from the inputs. No artificial increase.
+    decrementDataFaultCounter(); // when entering the main loop calculate the validity from the inputs. No artificial increase.
   }
 
   void ServerHistory::mainLoop() {
