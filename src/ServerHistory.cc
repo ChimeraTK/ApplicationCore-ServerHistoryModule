@@ -83,7 +83,7 @@ namespace ChimeraTK { namespace history {
     auto& nameList = boost::fusion::at_key<UserType>(_nameListMap.table);
     // tag to be added to the PVs created by the ServerHistory module
     std::string serverHistoryPVTag = getName();
-    serverHistoryPVTag.append("internal");
+    serverHistoryPVTag.append("_internal");
     // check if that tag is identical to the tag used to find ServerHistory vars
     if(getName().compare(_inputTag) == 0) {
       // In this case make sure to use a diffent tag name
