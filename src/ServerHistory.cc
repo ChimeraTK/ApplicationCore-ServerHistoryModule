@@ -151,6 +151,10 @@ namespace ChimeraTK { namespace history {
   };
 
   void ServerHistory::prepare() {
+    if(!getNumberOfVariables()) {
+      throw logic_error(
+          "No variables are connected to the ServerHistory module. Did you use the correct tag or connect a Device?");
+    }
     incrementDataFaultCounter(); // the written data is flagged as faulty
     writeAll();                  // send out initial values of all outputs.
     decrementDataFaultCounter(); // when entering the main loop calculate the validity from the inputs. No artificial increase.

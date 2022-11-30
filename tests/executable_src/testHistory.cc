@@ -111,6 +111,8 @@ BOOST_AUTO_TEST_CASE(testNoVarsFound) {
   std::puts("testNoVarsFound");
   testApp<int> app{"History"};
   BOOST_CHECK_EQUAL(app.hist.getNumberOfVariables(), 0);
+  ChimeraTK::TestFacility tf(app);
+  BOOST_CHECK_THROW(tf.runApplication(), ChimeraTK::logic_error);
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(testScalarHistory, T, test_types) {
