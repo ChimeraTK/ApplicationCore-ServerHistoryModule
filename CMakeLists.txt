@@ -7,19 +7,14 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${C
 
 set(${PROJECT_NAME}_MAJOR_VERSION 01)
 set(${PROJECT_NAME}_MINOR_VERSION 00)
-set(${PROJECT_NAME}_PATCH_VERSION 00)
+set(${PROJECT_NAME}_PATCH_VERSION 01)
 include(cmake/set_version_numbers.cmake)
 
 # Find the ControlSystemAdapter
 add_dependency(ChimeraTK-ApplicationCore 02.11 REQUIRED)
 
-FIND_PACKAGE(Boost COMPONENTS date_time REQUIRED)
-
 include(cmake/set_default_build_to_release.cmake)
 include(cmake/set_default_flags.cmake)
-
-# linker flags
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--export-dynamic ${ChimeraTK-ControlSystemAdapter_LINK_FLAGS}")
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 file(GLOB headers "${CMAKE_SOURCE_DIR}/include/*.h")
@@ -38,8 +33,7 @@ add_library(${PROJECT_NAME} SHARED ${library_sources} ${headers} ${module_header
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_FULL_LIBRARY_VERSION}
                                                  SOVERSION ${${PROJECT_NAME}_SOVERSION})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "${ChimeraTK-ApplicationCore_LINK_FLAGS}")
-target_link_libraries(${PROJECT_NAME} ${ChimeraTK-ApplicationCore_LIBRARIES}
-                                      ${Boost_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${ChimeraTK-ApplicationCore_LIBRARIES})
 
 
 # do not remove runtime path of the library when installing
@@ -67,7 +61,5 @@ set(${PROJECT_NAME}_LIBRARIES "${ChimeraTK-ApplicationCore_LIBRARIES}")
 set(${PROJECT_NAME}_LIBRARY_DIRS "${CMAKE_INSTALL_PREFIX}/lib")
 set(${PROJECT_NAME}_CXX_FLAGS "${ChimeraTK-ApplicationCore_CXX_FLAGS}")
 set(${PROJECT_NAME}_LINK_FLAGS "${ChimeraTK-ApplicationCore_LINK_FLAGS}")
-
-list(APPEND ${PROJECT_NAME}_PUBLIC_DEPENDENCIES "Boost COMPONENTS date_time")
 
 include(${CMAKE_SOURCE_DIR}/cmake/create_cmake_config_files.cmake)
