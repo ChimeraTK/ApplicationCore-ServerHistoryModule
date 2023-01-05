@@ -16,12 +16,15 @@ namespace ChimeraTK { namespace history {
     auto model = dynamic_cast<ModuleGroup*>(_owner)->getModel();
     auto neighbourDir = model.visit(
         Model::returnDirectory, Model::getNeighbourDirectory, Model::returnFirstHit(Model::DirectoryProxy{}));
-
+    std::vector<Model::ProcessVariableProxy> pvs;
     auto found = neighbourDir.visitByPath(".", [&](auto sourceDir) {
       sourceDir.visit([&](auto pv) { addVariableFromModel(pv); }, Model::breadthFirstSearch,
           Model::keepProcessVariables && Model::keepTag(_inputTag));
     });
 
+    for(auto pv : pvs) {
+      addVariableFromModel(pv);
+    }
     if(!found) {
       throw ChimeraTK::logic_error("Path passed to BaseDAQ<TRIGGERTYPE>::addSource() not found!");
     }
