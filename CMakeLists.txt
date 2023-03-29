@@ -1,17 +1,15 @@
 PROJECT(ChimeraTK-ApplicationCore-ServerHistoryModule)
-cmake_minimum_required(VERSION 2.8)
-
-include(cmake/add_dependency.cmake)
+cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules)
 
 set(${PROJECT_NAME}_MAJOR_VERSION 01)
 set(${PROJECT_NAME}_MINOR_VERSION 00)
-set(${PROJECT_NAME}_PATCH_VERSION 02)
+set(${PROJECT_NAME}_PATCH_VERSION 03)
 include(cmake/set_version_numbers.cmake)
 
 # Find the ControlSystemAdapter
-add_dependency(ChimeraTK-ApplicationCore 02.11 REQUIRED)
+find_package(ChimeraTK-ApplicationCore 02.11 REQUIRED)
 
 include(cmake/set_default_build_to_release.cmake)
 include(cmake/set_default_flags.cmake)
@@ -32,9 +30,9 @@ endif()
 add_library(${PROJECT_NAME} SHARED ${library_sources} ${headers} ${module_headers})
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_FULL_LIBRARY_VERSION}
                                                  SOVERSION ${${PROJECT_NAME}_SOVERSION})
-set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "${ChimeraTK-ApplicationCore_LINK_FLAGS}")
-target_link_libraries(${PROJECT_NAME} ${ChimeraTK-ApplicationCore_LIBRARIES})
-
+# exported includes are all under ${CMAKE_INSTALL_PREFIX}/include
+target_include_directories(${PROJECT_NAME} INTERFACE "$<INSTALL_INTERFACE:include>")
+target_link_libraries(${PROJECT_NAME} PUBLIC ChimeraTK::ChimeraTK-ApplicationCore)
 
 # do not remove runtime path of the library when installing
 set_property(TARGET ${PROJECT_NAME} PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
@@ -46,7 +44,10 @@ include(cmake/enable_doxygen_documentation.cmake)
 include(cmake/enable_code_style_check.cmake)
 
 # Install the library and the executables
-install( TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin LIBRARY DESTINATION lib )
+# this defines architecture-dependent ${CMAKE_INSTALL_LIBDIR}
+include(GNUInstallDirs)
+install( TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}Targets
+                                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} )
 
 # all include files go into include/PROJECT_NAME
 # The exclusion of ${PROJECT_NAME} prevents the recursive installation of the files just being installed.
@@ -62,4 +63,6 @@ set(${PROJECT_NAME}_LIBRARY_DIRS "${CMAKE_INSTALL_PREFIX}/lib")
 set(${PROJECT_NAME}_CXX_FLAGS "${ChimeraTK-ApplicationCore_CXX_FLAGS}")
 set(${PROJECT_NAME}_LINK_FLAGS "${ChimeraTK-ApplicationCore_LINK_FLAGS}")
 
+# we support our cmake EXPORTS as imported targets
+set(PROVIDES_EXPORTED_TARGETS 1)
 include(${CMAKE_SOURCE_DIR}/cmake/create_cmake_config_files.cmake)
