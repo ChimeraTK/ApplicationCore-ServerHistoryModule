@@ -4,8 +4,8 @@ cmake_minimum_required(VERSION 3.16)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules)
 
 set(${PROJECT_NAME}_MAJOR_VERSION 01)
-set(${PROJECT_NAME}_MINOR_VERSION 00)
-set(${PROJECT_NAME}_PATCH_VERSION 03)
+set(${PROJECT_NAME}_MINOR_VERSION 01)
+set(${PROJECT_NAME}_PATCH_VERSION 00)
 include(cmake/set_version_numbers.cmake)
 
 # Find the ControlSystemAdapter
@@ -57,12 +57,7 @@ install(DIRECTORY ${${PROJECT_NAME}_INCLUDE_DIRS} DESTINATION include/ChimeraTK/
                                                                  PATTERN ".svn" EXCLUDE
                                                                  PATTERN "${PROJECT_NAME}" EXCLUDE)
 
-set(${PROJECT_NAME}_INCLUDE_DIRS "${CMAKE_INSTALL_PREFIX}/include")
-set(${PROJECT_NAME}_LIBRARIES "${ChimeraTK-ApplicationCore_LIBRARIES}")
-set(${PROJECT_NAME}_LIBRARY_DIRS "${CMAKE_INSTALL_PREFIX}/lib")
-set(${PROJECT_NAME}_CXX_FLAGS "${ChimeraTK-ApplicationCore_CXX_FLAGS}")
-set(${PROJECT_NAME}_LINK_FLAGS "${ChimeraTK-ApplicationCore_LINK_FLAGS}")
-
 # we support our cmake EXPORTS as imported targets
 set(PROVIDES_EXPORTED_TARGETS 1)
+list(APPEND ${PROJECT_NAME}_PUBLIC_DEPENDENCIES "ChimeraTK-DeviceAccess")
 include(${CMAKE_SOURCE_DIR}/cmake/create_cmake_config_files.cmake)
