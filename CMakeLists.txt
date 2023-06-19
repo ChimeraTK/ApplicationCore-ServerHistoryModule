@@ -5,11 +5,11 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${C
 
 set(${PROJECT_NAME}_MAJOR_VERSION 01)
 set(${PROJECT_NAME}_MINOR_VERSION 01)
-set(${PROJECT_NAME}_PATCH_VERSION 00)
+set(${PROJECT_NAME}_PATCH_VERSION 01)
 include(cmake/set_version_numbers.cmake)
 
 # Find the ControlSystemAdapter
-find_package(ChimeraTK-ApplicationCore 02.11 REQUIRED)
+find_package(ChimeraTK-ApplicationCore 03.02 REQUIRED)
 
 include(cmake/set_default_build_to_release.cmake)
 include(cmake/set_default_flags.cmake)

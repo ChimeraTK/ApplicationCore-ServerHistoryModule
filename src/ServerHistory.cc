@@ -52,7 +52,8 @@ namespace ChimeraTK { namespace history {
 
     // check for name collision
     if(_overallVariableList.count(name) > 0) {
-      throw logic_error("ServerHistory: Variable name '" + name + "' already taken.");
+      // Can happen if a pv is added in the logical name mapping process twice, e.g. to use math plugin
+      return;
     }
 
     // create accessor and fill lists
