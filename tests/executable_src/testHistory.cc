@@ -66,15 +66,13 @@ struct DummyArray : public ChimeraTK::ApplicationModule {
  */
 template<typename UserType>
 struct testApp : public ChimeraTK::Application {
-  testApp(const std::string& historyTag = "history") : Application("test") {
-    hist = ChimeraTK::history::ServerHistory{
-        this, "historyTest", "History of selected process variables.", 20, historyTag};
-  }
+  testApp(const std::string& historyTag = "history")
+  : Application("test"), hist{this, "historyTest", "History of selected process variables.", 20, historyTag} {}
   ~testApp() override { shutdown(); }
 
   Dummy<UserType> dummy{this, "Dummy", "Dummy module"};
   // do not use name history here - else output vars will be added to the history too
-  ChimeraTK::history::ServerHistory hist{this, "history", "History of selected process variables.", 20};
+  ChimeraTK::history::ServerHistory hist;
 };
 
 /**
