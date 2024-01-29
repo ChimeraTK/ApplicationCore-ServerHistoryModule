@@ -18,7 +18,7 @@ namespace ChimeraTK { namespace history {
         Model::returnDirectory, Model::getNeighbourDirectory, Model::returnFirstHit(Model::DirectoryProxy{}));
     std::vector<Model::ProcessVariableProxy> pvs;
     auto found = neighbourDir.visitByPath(".", [&](auto sourceDir) {
-      sourceDir.visit([&](auto pv) { addVariableFromModel(pv); }, Model::breadthFirstSearch,
+      sourceDir.visit([&](auto pv) { pvs.emplace_back(pv); }, Model::breadthFirstSearch,
           Model::keepProcessVariables && Model::keepTag(_inputTag));
     });
 
@@ -64,8 +64,12 @@ namespace ChimeraTK { namespace history {
   }
 
   void ServerHistory::addSource(DeviceModule& source, const std::string& submodule) {
-    source.getModel().visit([&](auto pv) { addVariableFromModel(pv, submodule, false); }, Model::keepPvAccess,
-        Model::adjacentSearch, Model::keepProcessVariables);
+    std::vector<Model::ProcessVariableProxy> pvs;
+    source.getModel().visit(
+        [&](auto pv) { pvs.emplace_back(pv); }, Model::keepPvAccess, Model::adjacentSearch, Model::keepProcessVariables);
+    for(auto pv : pvs) {
+      addVariableFromModel(pv, submodule, false);
+    }
   }
 
   template<typename UserType>
