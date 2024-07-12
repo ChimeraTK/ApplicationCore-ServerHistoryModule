@@ -65,8 +65,8 @@ namespace ChimeraTK { namespace history {
 
   void ServerHistory::addSource(DeviceModule& source, const std::string& submodule) {
     std::vector<Model::ProcessVariableProxy> pvs;
-    source.getModel().visit(
-        [&](auto pv) { pvs.emplace_back(pv); }, Model::keepPvAccess, Model::adjacentSearch, Model::keepProcessVariables);
+    source.getModel().visit([&](auto pv) { pvs.emplace_back(pv); }, Model::keepPvAccess, Model::adjacentSearch,
+        Model::keepProcessVariables);
     for(auto pv : pvs) {
       addVariableFromModel(pv, submodule, false);
     }
