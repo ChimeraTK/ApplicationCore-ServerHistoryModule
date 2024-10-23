@@ -39,8 +39,8 @@ namespace ChimeraTK { namespace history {
       const Model::ProcessVariableProxy& pv, const RegisterPath& submodule, bool checkTag) {
     // gather information about the PV
     auto name = pv.getFullyQualifiedPath();
-    const auto& type = pv.getNodes().front().getValueType(); // All node types must be equal for a PV
-    auto length = pv.getNodes().front().getNumberOfElements();
+    const auto& type = pv.getNodes().front()->getValueType(); // All node types must be equal for a PV
+    auto length = pv.getNodes().front()->getNumberOfElements();
     if(checkTag) {
       auto tag = pv.getTags();
       if(!tag.count(_inputTag)) return;
