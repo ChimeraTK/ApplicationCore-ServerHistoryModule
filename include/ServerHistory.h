@@ -84,8 +84,6 @@
  *  write them once before the main loop of the module containing the history variables.
  */
 
-#include <unordered_set>
-
 #include <ChimeraTK/ApplicationCore/ApplicationModule.h>
 #include <ChimeraTK/ApplicationCore/ArrayAccessor.h>
 #include <ChimeraTK/ApplicationCore/DeviceModule.h>
@@ -94,6 +92,7 @@
 
 #include <string>
 #include <tuple>
+#include <unordered_set>
 #include <vector>
 
 namespace ChimeraTK { namespace history {
